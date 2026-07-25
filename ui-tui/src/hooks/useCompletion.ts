@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type MutableRefObject, useEffect, useRef, useState } from 'react'
 
 import type { CompletionItem } from '../app/interfaces.js'
 import { inlineSlashTrigger, looksLikeSlashCommand } from '../domain/slash.js'
@@ -23,6 +23,9 @@ export function mergeWidgetAppItems(input: string, items: CompletionItem[]): Com
 
   return [...items, ...local]
 }
+
+// ponytail: 10-item history window for slash command auto-suggest
+const HISTORY_COMPLETION_LIMIT = 10
 
 const TAB_PATH_RE = /((?:["']?(?:[A-Za-z]:[\\/]|\.{1,2}\/|~\/|\/|@|[^"'`\s]+\/))[^\s]*)$/
 
@@ -72,7 +75,12 @@ export function completionRequestForInput(
   }
 }
 
-export function useCompletion(input: string, blocked: boolean, gw: GatewayClient) {
+export function useCompletion(
+  input: string,
+  blocked: boolean,
+  gw: GatewayClient,
+  historyRef: MutableRefObject<string[]>
+) {
   const [completions, setCompletions] = useState<CompletionItem[]>([])
   const [compIdx, setCompIdx] = useState(0)
   const [compReplace, setCompReplace] = useState(0)
@@ -127,10 +135,25 @@ export function useCompletion(input: string, blocked: boolean, gw: GatewayClient
           // only a skill reads as "handle this part with X". Filtering here
           // rather than in the gateway keeps one completion source for both
           // shapes.
-          const items =
+          let items =
             request.method === 'complete.slash' && request.skillsOnly
               ? fetched.filter(item => item.kind === 'skill')
               : fetched
+
+          // ponytail: merge slash-command history matches into completions.
+          // Runs client-side on the existing history array — zero RPC cost.
+          if (request.method === 'complete.slash') {
+            const seen = new Set(items.map((i: CompletionItem) => i.text))
+
+            for (let i = historyRef.current.length - 1; i >= 0 && items.length < seen.size + HISTORY_COMPLETION_LIMIT; i--) {
+              const entry = historyRef.current[i]!
+
+              if (entry.startsWith(input) && !seen.has(entry)) {
+                seen.add(entry)
+                items.push({ text: entry, display: entry, meta: 'history' })
+              }
+            }
+          }
 
           setCompletions(items)
           setCompIdx(0)
@@ -159,7 +182,7 @@ export function useCompletion(input: string, blocked: boolean, gw: GatewayClient
     }, 60)
 
     return () => clearTimeout(t)
-  }, [blocked, gw, input])
+  }, [blocked, gw, input, historyRef])
 
   return { completions, compIdx, setCompIdx, compReplace }
 }

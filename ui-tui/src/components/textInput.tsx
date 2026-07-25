@@ -3,6 +3,7 @@ import * as Ink from '@hermes/ink'
 import { type MutableRefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import { setInputSelection } from '../app/inputSelectionStore.js'
+import { $overlayState } from '../app/overlayStore.js'
 import { readClipboardText, writeClipboardText } from '../lib/clipboard.js'
 import { cursorLayout, offsetFromPosition } from '../lib/inputMetrics.js'
 import {
@@ -1537,16 +1538,40 @@ export const shouldPassThroughToGlobalHandler = (
   input: string,
   key: Key,
   voiceRecordKey: ParsedVoiceRecordKey = DEFAULT_VOICE_RECORD_KEY
-): boolean =>
-  (key.ctrl && input === 'c') ||
-  (key.ctrl && input === 'x') ||
-  (key.ctrl && input === 'o') ||
-  key.tab ||
-  (key.shift && key.tab) ||
-  key.pageUp ||
-  key.pageDown ||
-  key.escape ||
-  isVoiceToggleKey(key, input, voiceRecordKey)
+): boolean => {
+  if (
+    (key.ctrl && input === 'c') ||
+    (key.ctrl && input === 'x') ||
+    (key.ctrl && input === 'o') ||
+    key.tab ||
+    (key.shift && key.tab) ||
+    key.pageUp ||
+    key.pageDown ||
+    key.escape ||
+    isVoiceToggleKey(key, input, voiceRecordKey)
+  ) {
+    return true
+  }
+
+  // Pager overlay: pass through navigation keys so the global handler
+  // can scroll the log viewer even if TextInput hasn't unmounted yet.
+  if ($overlayState.get().pager) {
+    return (
+      key.upArrow ||
+      key.downArrow ||
+      input === 'j' ||
+      input === 'k' ||
+      input === 'b' ||
+      input === 'g' ||
+      input === 'G' ||
+      key.return ||
+      input === ' ' ||
+      input === 'q'
+    )
+  }
+
+  return false
+}
 
 export interface TextInputMouseApi {
   dragAt: (row: number, col: number) => void
