@@ -1433,3 +1433,19 @@ test('windowsHide defaults to true on Windows, is left alone elsewhere', () => {
 If the logic lives inline in a god-file (`main.ts`, `cli.py`,
 `gateway/run.py`) and extracting it feels disruptive: that's the actual
 signal to do the extraction, not to regex around it.
+
+## Module Documentation
+
+The root `AGENTS.md` covers project-wide rules. Module-specific guides live
+alongside the code they describe:
+
+| Module | Path | Covers |
+|--------|------|--------|
+| Agent core | `agent/AGENTS.md` | `AIAgent` class, delegation, curator |
+| CLI | `hermes_cli/AGENTS.md` | CLI architecture, config, skin system, profiles |
+| Tools | `tools/AGENTS.md` | Adding new tools, toolsets |
+| Plugins | `plugins/AGENTS.md` | Plugin system, kanban |
+| Skills | `skills/AGENTS.md` | Skill authoring standards, frontmatter |
+| TUI | `ui-tui/AGENTS.md` | Ink TUI, JSON-RPC transport, dashboard embedding |
+| Desktop | `apps/desktop/AGENTS.md` | Electron desktop app, slash command curation |
+| Cron | `cron/AGENTS.md` | Scheduler, job formats, hardening invariants |
